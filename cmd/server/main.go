@@ -19,6 +19,9 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kihcnxlehp/pr-reviewer-service/internal/handler"
+	"github.com/kihcnxlehp/pr-reviewer-service/internal/repository"
+	"github.com/kihcnxlehp/pr-reviewer-service/internal/service"
 
 	"github.com/kihcnxlehp/pr-reviewer-service/internal/config"
 )
@@ -47,12 +50,13 @@ func main() {
 	}
 	log.Println("migrations applied")
 
+	teamRepo := repository.NewTeamRepository(pool)
+	teamService := service.NewTeamService(teamRepo)
+	handlers := handler.NewHandler(teamService)
+
 	// Set up HTTP server.
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
+	handlers.Register(mux)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.ServerPort,
