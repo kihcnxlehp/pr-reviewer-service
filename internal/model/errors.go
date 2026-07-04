@@ -1,20 +1,27 @@
 package model
 
-import "errors"
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+)
 
 // Domain errors returned by the service layer.
 var (
-	ErrTeamExists  = errors.New("team already exists")
-	ErrNotFound    = errors.New("resource not found")
-	ErrPRExists    = errors.New("pull request already exists")
-	ErrPRMerged    = errors.New("pull request is already merged")
-	ErrNotAssigned = errors.New("reviewer is not assigned to this PR")
-	ErrNoCandidate = errors.New("no active replacement candidate in team")
+	ErrInvalidInput = errors.New("invalid request payload")
+	ErrTeamExists   = errors.New("team already exists")
+	ErrNotFound     = errors.New("resource not found")
+	ErrPRExists     = errors.New("pull request already exists")
+	ErrPRMerged     = errors.New("pull request is already merged")
+	ErrNotAssigned  = errors.New("reviewer is not assigned to this PR")
+	ErrNoCandidate  = errors.New("no active replacement candidate in team")
 )
 
 // ErrorCode maps domain errors to API error codes.
 func ErrorCode(err error) string {
 	switch {
+	case errors.Is(err, ErrInvalidInput):
+		return "INVALID_PAYLOAD"
 	case errors.Is(err, ErrTeamExists):
 		return "TEAM_EXISTS"
 	case errors.Is(err, ErrNotFound):
@@ -28,6 +35,11 @@ func ErrorCode(err error) string {
 	case errors.Is(err, ErrNoCandidate):
 		return "NO_CANDIDATE"
 	default:
+		// For JSON parsing errors
+		var typeErr *json.UnmarshalTypeError
+		if _, ok := errors.AsType[*json.SyntaxError](err); ok || errors.As(err, &typeErr) {
+			return "INVALID_JSON"
+		}
 		return "INTERNAL_ERROR"
 	}
 }
@@ -35,15 +47,21 @@ func ErrorCode(err error) string {
 // HTTPStatus maps domain errors to HTTP status codes.
 func HTTPStatus(err error) int {
 	switch {
+	case errors.Is(err, ErrInvalidInput):
+		return http.StatusBadRequest
 	case errors.Is(err, ErrTeamExists),
 		errors.Is(err, ErrPRExists),
 		errors.Is(err, ErrPRMerged),
 		errors.Is(err, ErrNotAssigned),
 		errors.Is(err, ErrNoCandidate):
-		return 409 // Conflict
+		return http.StatusConflict
 	case errors.Is(err, ErrNotFound):
-		return 404 // Not Found
+		return http.StatusNotFound
 	default:
-		return 500 // Internal Server Error
+		var typeErr *json.UnmarshalTypeError
+		if _, ok := errors.AsType[*json.SyntaxError](err); ok || errors.As(err, &typeErr) {
+			return http.StatusBadRequest
+		}
+		return http.StatusInternalServerError
 	}
 }
