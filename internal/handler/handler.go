@@ -2,7 +2,6 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"log"
@@ -11,20 +10,15 @@ import (
 	"github.com/kihcnxlehp/pr-reviewer-service/internal/model"
 )
 
-// Service defines the contract for team-related business logic.
-type Service interface {
-	CreateTeam(ctx context.Context, team model.Team) (model.Team, error)
-	GetTeam(ctx context.Context, teamName string) (model.Team, error)
-}
-
 // Handler holds dependencies for HTTP handlers.
 type Handler struct {
-	service Service
+	team *TeamHandler
+	user *UserHandler
 }
 
-// NewHandler creates a new Handler.
-func NewHandler(service Service) *Handler {
-	return &Handler{service: service}
+// New creates a new Handler.
+func New(teamHandler *TeamHandler, userHandler *UserHandler) *Handler {
+	return &Handler{team: teamHandler, user: userHandler}
 }
 
 // MaxRequestBodySize limits payload size to 1 MB.
@@ -32,9 +26,21 @@ const MaxRequestBodySize = 1 << 20
 
 // Register adds all routes to the given mux.
 func (h *Handler) Register(mux *http.ServeMux) {
-	mux.HandleFunc("POST /team/add", h.AddTeam)
-	mux.HandleFunc("GET /team/get", h.GetTeam)
+	// Team routes
+	mux.HandleFunc("POST /team/add", h.team.AddTeam)
+	mux.HandleFunc("GET /team/get", h.team.GetTeam)
+
+	// User routes
+	mux.HandleFunc("POST /users/setIsActive", h.user.SetIsActive)
+
+	// Common routes
 	mux.HandleFunc("GET /health", h.Health)
+}
+
+// Health handles GET /health.
+func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ok"))
 }
 
 type ErrorResponse struct {

@@ -51,8 +51,15 @@ func main() {
 	log.Println("migrations applied")
 
 	teamRepo := repository.NewTeamRepository(pool)
+	userRepo := repository.NewUserRepository(pool)
+
 	teamService := service.NewTeamService(teamRepo)
-	handlers := handler.NewHandler(teamService)
+	userService := service.NewUserService(userRepo)
+
+	teamHandler := handler.NewTeamHandler(teamService)
+	userHandler := handler.NewUserHandler(userService)
+
+	handlers := handler.New(teamHandler, userHandler)
 
 	// Set up HTTP server.
 	mux := http.NewServeMux()

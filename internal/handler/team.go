@@ -1,15 +1,29 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/kihcnxlehp/pr-reviewer-service/internal/model"
 )
 
+// TeamService defines the contract for team-related business logic.
+type TeamService interface {
+	CreateTeam(ctx context.Context, team model.Team) (model.Team, error)
+	GetTeam(ctx context.Context, teamName string) (model.Team, error)
+}
+
+type TeamHandler struct {
+	service TeamService
+}
+
+func NewTeamHandler(service TeamService) *TeamHandler {
+	return &TeamHandler{service: service}
+}
+
 // AddTeam handles POST /team/add
-func (h *Handler) AddTeam(w http.ResponseWriter, r *http.Request) {
-	// Protect against oversized payloads.
+func (h *TeamHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
 	defer r.Body.Close()
 
@@ -32,7 +46,7 @@ func (h *Handler) AddTeam(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetTeam handles GET /team/get
-func (h *Handler) GetTeam(w http.ResponseWriter, r *http.Request) {
+func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 	teamName := r.URL.Query().Get("team_name")
 	if teamName == "" {
 		writeError(w, model.ErrInvalidInput)
@@ -46,10 +60,4 @@ func (h *Handler) GetTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, team)
-}
-
-// Health handles GET /health.
-func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("ok"))
 }

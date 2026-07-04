@@ -23,8 +23,8 @@ func NewTeamRepository(pool *pgxpool.Pool) *TeamRepository {
 
 // CreateTeam creates a new team and inserts its members in a single transaction.
 // Returns model.ErrTeamExists if the team name is already taken.
-func (repo *TeamRepository) CreateTeam(ctx context.Context, team model.Team) error {
-	tx, err := repo.pool.Begin(ctx)
+func (r *TeamRepository) CreateTeam(ctx context.Context, team model.Team) error {
+	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
@@ -58,10 +58,10 @@ func (repo *TeamRepository) CreateTeam(ctx context.Context, team model.Team) err
 
 // GetTeam returns a team with all its members.
 // Returns model.ErrNotFound if the team does not exist.
-func (repo *TeamRepository) GetTeam(ctx context.Context, teamName string) (model.Team, error) {
+func (r *TeamRepository) GetTeam(ctx context.Context, teamName string) (model.Team, error) {
 	// Verify team exists.
 	var exists bool
-	err := repo.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM teams WHERE team_name = $1)", teamName).Scan(&exists)
+	err := r.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM teams WHERE team_name = $1)", teamName).Scan(&exists)
 	if err != nil {
 		return model.Team{}, fmt.Errorf("check team existence: %w", err)
 	}
@@ -70,7 +70,7 @@ func (repo *TeamRepository) GetTeam(ctx context.Context, teamName string) (model
 	}
 
 	// Fetch members.
-	rows, err := repo.pool.Query(ctx,
+	rows, err := r.pool.Query(ctx,
 		`SELECT user_id, username, is_active
 		 FROM users
 		 WHERE team_name = $1
