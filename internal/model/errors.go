@@ -9,7 +9,7 @@ import (
 // Domain errors returned by the service layer.
 var (
 	ErrInvalidInput = errors.New("invalid request payload")
-	ErrTeamExists   = errors.New("team already exists")
+	ErrTeamExists   = errors.New("team_name already exists")
 	ErrNotFound     = errors.New("resource not found")
 	ErrPRExists     = errors.New("pull request already exists")
 	ErrPRMerged     = errors.New("pull request is already merged")
@@ -47,10 +47,10 @@ func ErrorCode(err error) string {
 // HTTPStatus maps domain errors to HTTP status codes.
 func HTTPStatus(err error) int {
 	switch {
-	case errors.Is(err, ErrInvalidInput):
+	case errors.Is(err, ErrInvalidInput),
+		errors.Is(err, ErrTeamExists):
 		return http.StatusBadRequest
-	case errors.Is(err, ErrTeamExists),
-		errors.Is(err, ErrPRExists),
+	case errors.Is(err, ErrPRExists),
 		errors.Is(err, ErrPRMerged),
 		errors.Is(err, ErrNotAssigned),
 		errors.Is(err, ErrNoCandidate):
