@@ -10,7 +10,7 @@ import (
 
 // UserRepository defines the data access contracts for users.
 type UserRepository interface {
-	UpdateIsActive(ctx context.Context, userID string, isActive bool) error
+	UpdateIsActive(ctx context.Context, userID string, isActive bool) (model.User, error)
 }
 
 // UserService handles user-related business logic.
@@ -24,16 +24,18 @@ func NewUserService(repo UserRepository) *UserService {
 }
 
 // SetIsActive updates the active status of a user.
-func (s *UserService) SetIsActive(ctx context.Context, userID string, isActive bool) error {
+func (s *UserService) SetIsActive(ctx context.Context, userID string, isActive bool) (model.User, error) {
 	if userID == "" {
-		return fmt.Errorf("user id is empty: %w", model.ErrInvalidInput)
+		return model.User{}, fmt.Errorf("user id is empty: %w", model.ErrInvalidInput)
 	}
 
-	if err := s.repo.UpdateIsActive(ctx, userID, isActive); err != nil {
+	user, err := s.repo.UpdateIsActive(ctx, userID, isActive)
+	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
-			return err
+			return model.User{}, err
 		}
-		return fmt.Errorf("set user is_active: %w", err)
+		return model.User{}, fmt.Errorf("set user is_active: %w", err)
 	}
-	return nil
+
+	return user, nil
 }
