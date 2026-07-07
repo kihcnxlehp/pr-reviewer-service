@@ -11,6 +11,7 @@ import (
 // UserRepository defines the data access contracts for users.
 type UserRepository interface {
 	UpdateIsActive(ctx context.Context, userID string, isActive bool) (model.User, error)
+	GetTeam(ctx context.Context, userID string) (string, error)
 }
 
 // UserService handles user-related business logic.
