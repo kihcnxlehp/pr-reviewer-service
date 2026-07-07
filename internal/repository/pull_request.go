@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
@@ -108,4 +109,95 @@ VALUES ($1, $2, $3, 'OPEN') RETURNING created_at`,
 		AssignedReviewers: reviewersIDs,
 		CreatedAt:         &createdAtStr,
 	}, nil
+}
+
+// GetFullPullRequest retrieves a pull request with all its details and assigned reviewers.
+// Returns model.ErrNotFound if the PR does not exist.
+func (r *PullRequestRepository) GetFullPullRequest(ctx context.Context, prID string) (model.PullRequest, error) {
+	var pr model.PullRequest
+	var createdAt, mergedAt sql.NullTime
+
+	err := r.pool.QueryRow(ctx, `SELECT pull_request_id, pull_request_name, author_id, status, created_at, merged_at
+FROM pull_requests
+WHERE pull_request_id = $1`, prID).Scan(&pr.PullRequestID, &pr.PullRequestName, &pr.AuthorID, &pr.Status, &createdAt, &mergedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.PullRequest{}, model.ErrNotFound
+		}
+		return model.PullRequest{}, fmt.Errorf("get pull request: %w", err)
+	}
+
+	if createdAt.Valid {
+		createdAtStr := createdAt.Time.Format(time.RFC3339)
+		pr.CreatedAt = &createdAtStr
+	}
+	if mergedAt.Valid {
+		mergedAtStr := mergedAt.Time.Format(time.RFC3339)
+		pr.MergedAt = &mergedAtStr
+	}
+
+	// Fetch assigned reviewers.
+	rows, err := r.pool.Query(ctx, `SELECT user_id FROM pr_reviewers WHERE pull_request_id = $1`, prID)
+	if err != nil {
+		return model.PullRequest{}, fmt.Errorf("get reviewers: %w", err)
+	}
+	defer rows.Close()
+
+	var reviewers []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return model.PullRequest{}, fmt.Errorf("scan reviewer: %w", err)
+		}
+		reviewers = append(reviewers, id)
+	}
+	if err := rows.Err(); err != nil {
+		return model.PullRequest{}, fmt.Errorf("iterate reviewers: %w", err)
+	}
+	pr.AssignedReviewers = reviewers
+	return pr, nil
+}
+
+// Merge marks a pull request as MERGED and sets merged_at.
+// This operation is idempotent: calling it on an already-merged PR returns
+// the current state without error.
+// Returns the updated PullRequest with all fields and assigned reviewers.
+// Returns model.ErrNotFound if the PR does not exist.
+func (r *PullRequestRepository) Merge(ctx context.Context, prID string) (model.PullRequest, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return model.PullRequest{}, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Check current status.
+	var currentStatus string
+	err = tx.QueryRow(ctx, `SELECT status FROM pull_requests WHERE pull_request_id = $1`,
+		prID,
+	).Scan(&currentStatus)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.PullRequest{}, model.ErrNotFound
+		}
+		return model.PullRequest{}, fmt.Errorf("check status: %w", err)
+	}
+
+	//if already merged, just return the current state (idempotent behavior).
+	if currentStatus != "MERGED" {
+		// Update status and merged it.
+		_, err = tx.Exec(ctx, `UPDATE pull_requests
+SET status = 'MERGED', merged_at = now()
+WHERE pull_request_id = $1
+RETURNING merged_at`, prID)
+		if err != nil {
+			return model.PullRequest{}, fmt.Errorf("update status: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return model.PullRequest{}, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	// Fetch full PR with reviewers.
+	return r.GetFullPullRequest(ctx, prID)
 }
