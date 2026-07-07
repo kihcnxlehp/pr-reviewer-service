@@ -36,6 +36,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 
 	// PullRequest routes
 	mux.HandleFunc("POST /pullRequest/create", h.pullRequest.CreatePullRequest)
+	mux.HandleFunc("POST /pullRequest/merge", h.pullRequest.MergePullRequest)
 
 	// Common routes
 	mux.HandleFunc("GET /health", h.Health)
