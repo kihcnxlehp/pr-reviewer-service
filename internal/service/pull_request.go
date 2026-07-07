@@ -13,6 +13,7 @@ import (
 type PullRequestRepository interface {
 	Create(ctx context.Context, prID, prName, authorID string, reviewersIDs []string) (model.PullRequest, error)
 	GetActiveReviewers(ctx context.Context, authorID, teamName string) ([]string, error)
+	Merge(ctx context.Context, prID string) (model.PullRequest, error)
 }
 
 // PullRequestService handles pull request business logic.
@@ -78,4 +79,22 @@ func selectReviewers(candidates []string, max int) []string {
 	result := make([]string, max)
 	copy(result, candidates[:max])
 	return result
+}
+
+// MergePullRequest marks a pull request as merged.
+// Returns the updated PullRequest with merged_at timestamp.
+func (s *PullRequestService) MergePullRequest(ctx context.Context, prID string) (model.PullRequest, error) {
+	if prID == "" {
+		return model.PullRequest{}, fmt.Errorf("%w: pull_request_id is required", model.ErrInvalidInput)
+	}
+
+	pr, err := s.prRepo.Merge(ctx, prID)
+	if err != nil {
+		if errors.Is(err, model.ErrNotFound) {
+			return model.PullRequest{}, err
+		}
+		return model.PullRequest{}, fmt.Errorf("merge pull request: %w", err)
+	}
+
+	return pr, nil
 }
