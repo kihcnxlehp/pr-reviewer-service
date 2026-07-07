@@ -50,16 +50,20 @@ func main() {
 	}
 	log.Println("migrations applied")
 
+	// Build dependency graph (top-down: repository → service → handler).
 	teamRepo := repository.NewTeamRepository(pool)
 	userRepo := repository.NewUserRepository(pool)
+	prRepo := repository.NewPullRequestRepository(pool)
 
 	teamService := service.NewTeamService(teamRepo)
 	userService := service.NewUserService(userRepo)
+	prService := service.NewPullRequestService(prRepo, userRepo)
 
 	teamHandler := handler.NewTeamHandler(teamService)
 	userHandler := handler.NewUserHandler(userService)
+	prHandler := handler.NewPullRequestHandler(prService)
 
-	handlers := handler.New(teamHandler, userHandler)
+	handlers := handler.New(teamHandler, userHandler, prHandler)
 
 	// Set up HTTP server.
 	mux := http.NewServeMux()

@@ -3,10 +3,8 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kihcnxlehp/pr-reviewer-service/internal/model"
 )
@@ -97,11 +95,4 @@ func (r *TeamRepository) GetTeam(ctx context.Context, teamName string) (model.Te
 	}
 
 	return team, nil
-}
-
-func isUniqueViolation(err error) bool {
-	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
-		return pgErr.Code == "23505"
-	}
-	return false
 }
