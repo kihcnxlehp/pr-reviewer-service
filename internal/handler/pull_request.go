@@ -11,6 +11,7 @@ import (
 // PullRequestService defines the contracts for pull request business logic.
 type PullRequestService interface {
 	CreatePullRequest(ctx context.Context, prID, prName, authorID string) (model.PullRequest, error)
+	MergePullRequest(ctx context.Context, prID string) (model.PullRequest, error)
 }
 
 // PullRequestHandler handles HTTP requests for pull request endpoints.
@@ -51,4 +52,31 @@ func (h *PullRequestHandler) CreatePullRequest(w http.ResponseWriter, r *http.Re
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]any{"pr": pr})
+}
+
+type mergePullRequestReq struct {
+	PullRequestID string `json:"pull_request_id"`
+}
+
+// MergePullRequest handles POST /pullRequest/merge.
+func (h *PullRequestHandler) MergePullRequest(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
+	defer r.Body.Close()
+
+	var req mergePullRequestReq
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(&req); err != nil {
+		writeError(w, err)
+		return
+	}
+
+	pr, err := h.prService.MergePullRequest(r.Context(), req.PullRequestID)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"pr": pr})
 }
