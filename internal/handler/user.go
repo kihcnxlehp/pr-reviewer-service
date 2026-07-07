@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+
+	"github.com/kihcnxlehp/pr-reviewer-service/internal/model"
 )
 
 // UserService defines the contract for user-related business logic.
 type UserService interface {
-	SetIsActive(ctx context.Context, userID string, isActive bool) error
+	SetIsActive(ctx context.Context, userID string, isActive bool) (model.User, error)
 }
 
 // UserHandler handles HTTP requests for user endpoints.
@@ -41,11 +43,11 @@ func (h *UserHandler) SetIsActive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.UserService.SetIsActive(r.Context(), req.UserID, req.IsActive)
+	user, err := h.UserService.SetIsActive(r.Context(), req.UserID, req.IsActive)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	writeJSON(w, http.StatusOK, map[string]any{"user": user})
 }
