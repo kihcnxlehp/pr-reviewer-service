@@ -12,6 +12,7 @@ import (
 type PullRequestService interface {
 	CreatePullRequest(ctx context.Context, prID, prName, authorID string) (model.PullRequest, error)
 	MergePullRequest(ctx context.Context, prID string) (model.PullRequest, error)
+	ReassignReviewers(ctx context.Context, prID, oldReviewerID string) (model.PullRequest, string, error)
 }
 
 // PullRequestHandler handles HTTP requests for pull request endpoints.
@@ -54,6 +55,7 @@ func (h *PullRequestHandler) CreatePullRequest(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusCreated, map[string]any{"pr": pr})
 }
 
+// mergePullRequest represents the request body for POST /pullRequest/merge.
 type mergePullRequestReq struct {
 	PullRequestID string `json:"pull_request_id"`
 }
@@ -79,4 +81,33 @@ func (h *PullRequestHandler) MergePullRequest(w http.ResponseWriter, r *http.Req
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"pr": pr})
+}
+
+// ReassignPullRequestReq represents the request bode for POST /pullRequest/reassign.
+type ReassignPullRequestReq struct {
+	PullRequestID string `json:"pull_request_id"`
+	OldUserId     string `json:"old_user_id"`
+}
+
+// ReassignPullRequest handles POST /pullRequest/reassign.
+func (h *PullRequestHandler) ReassignPullRequest(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
+	defer r.Body.Close()
+
+	var req ReassignPullRequestReq
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(&req); err != nil {
+		writeError(w, err)
+		return
+	}
+
+	pr, replacedBy, err := h.prService.ReassignReviewers(r.Context(), req.PullRequestID, req.OldUserId)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"pr": pr, "replaced_by": replacedBy})
 }
