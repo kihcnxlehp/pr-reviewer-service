@@ -33,6 +33,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 
 	// User routes
 	mux.HandleFunc("POST /users/setIsActive", h.user.SetIsActive)
+	mux.HandleFunc("GET /users/getReview", h.user.GetReview)
 
 	// PullRequest routes
 	mux.HandleFunc("POST /pullRequest/create", h.pullRequest.CreatePullRequest)
