@@ -11,6 +11,7 @@ import (
 // UserService defines the contract for user-related business logic.
 type UserService interface {
 	SetIsActive(ctx context.Context, userID string, isActive bool) (model.User, error)
+	GetReview(ctx context.Context, userID string) ([]model.PullRequestShort, error)
 }
 
 // UserHandler handles HTTP requests for user endpoints.
@@ -50,4 +51,21 @@ func (h *UserHandler) SetIsActive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"user": user})
+}
+
+// GetReview handles GET /users/getReview?user_id=...
+func (h *UserHandler) GetReview(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		writeError(w, model.ErrInvalidInput)
+		return
+	}
+
+	prs, err := h.UserService.GetReview(r.Context(), userID)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"user_id": userID, "pull_requests": prs})
 }
