@@ -32,3 +32,11 @@ type PullRequest struct {
 	CreatedAt         *string  `json:"createdAt,omitempty"`
 	MergedAt          *string  `json:"mergedAt,omitempty"`
 }
+
+// PullRequestShort represents a brief view of a pull request (without reviewers and timestamps).
+type PullRequestShort struct {
+	PullRequestID   string `json:"pull_request_id"`
+	PullRequestName string `json:"pull_request_name"`
+	AuthorID        string `json:"author_id"`
+	Status          string `json:"status"`
+}

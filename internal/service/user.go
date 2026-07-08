@@ -12,6 +12,7 @@ import (
 type UserRepository interface {
 	UpdateIsActive(ctx context.Context, userID string, isActive bool) (model.User, error)
 	GetTeam(ctx context.Context, userID string) (string, error)
+	GetPRsByReviewer(ctx context.Context, userID string) ([]model.PullRequestShort, error)
 }
 
 // UserService handles user-related business logic.
@@ -39,4 +40,14 @@ func (s *UserService) SetIsActive(ctx context.Context, userID string, isActive b
 	}
 
 	return user, nil
+}
+
+// GetReview return pull requests where the user is assigned as a reviewer.
+func (s *UserService) GetReview(ctx context.Context, userID string) ([]model.PullRequestShort, error) {
+	prs, err := s.repo.GetPRsByReviewer(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get prs by reviewer: %w", err)
+	}
+
+	return prs, nil
 }
