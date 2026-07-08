@@ -201,3 +201,113 @@ RETURNING merged_at`, prID)
 	// Fetch full PR with reviewers.
 	return r.GetFullPullRequest(ctx, prID)
 }
+
+// GetPRStatus returns the status of a pull request.
+// Returns model.ErrNotFound if the PR does not exist.
+func (r *PullRequestRepository) GetPRStatus(ctx context.Context, prID string) (string, error) {
+	var status string
+	err := r.pool.QueryRow(ctx, "SELECT status FROM pull_requests WHERE pull_request_id = $1", prID).Scan(&status)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", model.ErrNotFound
+		}
+		return "", fmt.Errorf("get pull request status: %w", err)
+	}
+
+	return status, nil
+}
+
+// GetAuthorAndTeam returns the author_id and team_name for a giver PR.
+func (r *PullRequestRepository) GetAuthorAndTeam(ctx context.Context, prID string) (authorID, teamName string, err error) {
+	err = r.pool.QueryRow(ctx, `SELECT author_id, team_name
+FROM pull_requests p
+JOIN users u on u.user_id = p.author_id
+WHERE p.pull_request_id = $1`,
+		prID,
+	).Scan(&authorID, &teamName)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", "", model.ErrNotFound
+		}
+		return "", "", fmt.Errorf("get author and team: %w", err)
+	}
+
+	return authorID, teamName, nil
+}
+
+// GetPRReviewers returns user_ids of reviewers assigned to the PR.
+func (r *PullRequestRepository) GetPRReviewers(ctx context.Context, prID string) ([]string, error) {
+	rows, err := r.pool.Query(ctx,
+		"SELECT user_id FROM pr_reviewers WHERE pull_request_id = $1",
+		prID)
+	if err != nil {
+		return nil, fmt.Errorf("get pull request reviewers: %w", err)
+	}
+	defer rows.Close()
+
+	var reviewers []string
+	for rows.Next() {
+		var reviewerID string
+		if err := rows.Scan(&reviewerID); err != nil {
+			return nil, fmt.Errorf("scan reviewer: %w", err)
+		}
+		reviewers = append(reviewers, reviewerID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate reviewers: %w", err)
+	}
+
+	return reviewers, nil
+}
+
+// GetActiveCandidates returns active users in the team who are not the author and not already reviewers.
+func (r *PullRequestRepository) GetActiveCandidates(ctx context.Context, teamName, authorID, prID string) ([]string, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT user_id FROM users
+WHERE team_name = $1
+AND user_id != $2
+AND is_active = TRUE
+AND user_id NOT IN (SELECT user_id FROM pr_reviewers WHERE pull_request_id = $3)
+ORDER BY user_id`, teamName, authorID, prID)
+	if err != nil {
+		return nil, fmt.Errorf("get active candidates: %w", err)
+	}
+	defer rows.Close()
+
+	var candidates []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan candidate: %w", err)
+		}
+		candidates = append(candidates, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate candidates: %w", err)
+	}
+
+	return candidates, nil
+}
+
+// ReplaceReviewer remotes oldReviewerID and adds newReviewerID to the PR.
+func (r *PullRequestRepository) ReplaceReviewer(ctx context.Context, prID, oldReviewerID, newReviewerID string) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, "DELETE FROM pr_reviewers WHERE pull_request_id = $1 AND user_id = $2",
+		prID, oldReviewerID)
+	if err != nil {
+		return fmt.Errorf("remove old reviewer: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, "INSERT INTO pr_reviewers (pull_request_id, user_id) VALUES ($1, $2)",
+		prID, newReviewerID)
+	if err != nil {
+		return fmt.Errorf("insert new reviewer: %w", err)
+	}
+
+	return tx.Commit(ctx)
+}
