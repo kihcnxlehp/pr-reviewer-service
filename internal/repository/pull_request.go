@@ -311,3 +311,31 @@ func (r *PullRequestRepository) ReplaceReviewer(ctx context.Context, prID, oldRe
 
 	return tx.Commit(ctx)
 }
+
+// GetPRsByReviewer returns brief information about pull requests where the giver user is assigned as a reviewer.
+func (r *PullRequestRepository) GetPRsByReviewer(ctx context.Context, userID string) ([]model.PullRequestShort, error) {
+	rows, err := r.pool.Query(ctx, `SELECT p.pull_request_id, p.pull_request_name, p.author_id, p.status
+FROM pr_reviewers pr
+JOIN pull_requests p ON p.pull_request_id = pr.pull_request_id
+WHERE pr.user_id = $1
+ORDER BY p.created_at DESC`,
+		userID)
+	if err != nil {
+		return nil, fmt.Errorf("get PRs by reviewer: %w", err)
+	}
+	defer rows.Close()
+
+	var prs []model.PullRequestShort
+	for rows.Next() {
+		var pr model.PullRequestShort
+		if err := rows.Scan(&pr.PullRequestID, &pr.PullRequestName, &pr.AuthorID, &pr.Status); err != nil {
+			return nil, fmt.Errorf("scan PR: %w", err)
+		}
+		prs = append(prs, pr)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate PRs: %w", err)
+	}
+
+	return prs, nil
+}
