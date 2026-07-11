@@ -1,7 +1,11 @@
 // Package config provides application configuration loading from environment variables.
 package config
 
-import "os"
+import (
+	"log"
+	"os"
+	"strconv"
+)
 
 // Config holds the application configuration.
 type Config struct {
@@ -11,10 +15,17 @@ type Config struct {
 
 // Load reads configuration from environment variables with sensible defaults.
 func Load() Config {
-	return Config{
-		DatabaseURL: getEnv("DATABASE_URL", ""),
+	cfg := Config{
+		DatabaseURL: getEnv("DATABASE_URL", "postgres://user:pass@localhost:5432/db?sslmode=disable"),
 		ServerPort:  getEnv("SERVER_PORT", "8080"),
 	}
+
+	if port, err := strconv.Atoi(cfg.ServerPort); err != nil || port < 1 || port > 65535 {
+		log.Printf("invalid SERVER_PORT '%s', using default 8080", cfg.ServerPort)
+		cfg.ServerPort = "8080"
+	}
+
+	return cfg
 }
 
 // getEnv returns the value of the environment variable or a fallback if not set.
