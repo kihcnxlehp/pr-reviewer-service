@@ -20,6 +20,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kihcnxlehp/pr-reviewer-service/internal/handler"
+	"github.com/kihcnxlehp/pr-reviewer-service/internal/middleware"
 	"github.com/kihcnxlehp/pr-reviewer-service/internal/repository"
 	"github.com/kihcnxlehp/pr-reviewer-service/internal/service"
 
@@ -68,6 +69,10 @@ func main() {
 	// Set up HTTP server.
 	mux := http.NewServeMux()
 	handlers.Register(mux)
+
+	var handler http.Handler = mux
+	handler = middleware.Recovery(handler) // ← ближе к handler
+	handler = middleware.Logging(handler)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.ServerPort,
