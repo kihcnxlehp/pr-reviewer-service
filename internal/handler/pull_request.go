@@ -70,7 +70,7 @@ func (h *PullRequestHandler) MergePullRequest(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, map[string]any{"pr": pr})
 }
 
-// ReassignPullRequestReq represents the request bode for POST /pullRequest/reassign.
+// ReassignPullRequestReq represents the request body for POST /pullRequest/reassign.
 type ReassignPullRequestReq struct {
 	PullRequestID string `json:"pull_request_id"`
 	OldUserId     string `json:"old_user_id"`
