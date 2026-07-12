@@ -85,6 +85,7 @@ func safeMessage(err error, status int) string {
 		return "invalid JSON payload"
 	case errors.Is(err, model.ErrInvalidInput):
 		// Strip internal details (e.g. "team_name is required"), keep only the generic message.
+		log.Printf("invalid input: %v", err)
 		return "invalid request payload"
 	case status >= http.StatusInternalServerError:
 		// Hide all internal errors.
