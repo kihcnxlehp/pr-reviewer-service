@@ -86,7 +86,6 @@ func selectReviewers(candidates []string, max int) []string {
 	rand.Shuffle(len(candidates), func(i, j int) {
 		candidates[i], candidates[j] = candidates[j], candidates[i]
 	})
-
 	result := make([]string, max)
 	copy(result, candidates[:max])
 	return result
