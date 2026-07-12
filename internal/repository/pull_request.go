@@ -203,8 +203,10 @@ RETURNING merged_at`, prID)
 }
 
 // GetAuthorAndTeam returns the author_id and team_name for a giver PR.
-func (r *PullRequestRepository) GetAuthorAndTeam(ctx context.Context, prID string) (authorID, teamName string, err error) {
-	err = r.pool.QueryRow(ctx, `SELECT author_id, team_name
+func (r *PullRequestRepository) GetAuthorAndTeam(ctx context.Context, prID string) (string, string, error) {
+	var authorID, teamName string
+
+	err := r.pool.QueryRow(ctx, `SELECT author_id, team_name
 FROM pull_requests p
 JOIN users u on u.user_id = p.author_id
 WHERE p.pull_request_id = $1`,
