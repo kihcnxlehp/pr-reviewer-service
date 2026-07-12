@@ -101,3 +101,19 @@ func isJSONParseError(err error) bool {
 	var typeErr *json.UnmarshalTypeError
 	return errors.As(err, &syntaxErr) || errors.As(err, &typeErr)
 }
+
+// decodeJSON reads and validates JSON request body.
+// It applies MaxBytesReader limit and disallows unknown fields.
+func decodeJSON(w http.ResponseWriter, r *http.Request, v any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
+	defer r.Body.Close()
+
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(v); err != nil {
+		return err
+	}
+
+	return nil
+}

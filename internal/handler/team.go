@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/kihcnxlehp/pr-reviewer-service/internal/model"
@@ -24,14 +23,8 @@ func NewTeamHandler(service TeamService) *TeamHandler {
 
 // AddTeam handles POST /team/add
 func (h *TeamHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-	defer r.Body.Close()
-
 	var team model.Team
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-
-	if err := dec.Decode(&team); err != nil {
+	if err := decodeJSON(w, r, &team); err != nil {
 		writeError(w, err)
 		return
 	}
