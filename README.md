@@ -23,6 +23,7 @@ The project follows **clean architecture** with strict layer separation:
 cmd/server/main.go          → entry point, dependency wiring
 internal/
 ├── config/                  → environment configuration
+├── middleware/              → HTTP middleware (logging, recovery)
 ├── model/                   → domain entities and error mapping
 ├── repository/              → data access layer (PostgreSQL)
 ├── service/                 → business logic and validation
@@ -132,6 +133,9 @@ Migrations are stored in `migrations/` and applied automatically on startup.
 │   ├── model/
 │   │   ├── model.go             # Domain entities
 │   │   └── errors.go            # Error codes and HTTP status mapping
+│   ├── middleware/
+│   │   ├── logging.go           # Request logging with time
+│   │   └── recovery.go          # Panic recovery
 │   ├── repository/
 │   │   ├── team.go              # Team data access
 │   │   ├── user.go              # User data access
