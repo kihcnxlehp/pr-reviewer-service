@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 
 	"github.com/kihcnxlehp/pr-reviewer-service/internal/model"
 )
@@ -79,9 +79,14 @@ func selectReviewers(candidates []string, max int) []string {
 		copy(result, candidates)
 		return result
 	}
+
+	candidatesCopy := make([]string, len(candidates))
+	copy(candidatesCopy, candidates)
+
 	rand.Shuffle(len(candidates), func(i, j int) {
 		candidates[i], candidates[j] = candidates[j], candidates[i]
 	})
+
 	result := make([]string, max)
 	copy(result, candidates[:max])
 	return result
