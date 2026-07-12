@@ -89,6 +89,7 @@ func safeMessage(err error, status int) string {
 		return "invalid request payload"
 	case status >= http.StatusInternalServerError:
 		// Hide all internal errors.
+		log.Printf("internal error: %v", err)
 		return "internal server error"
 	default:
 		// Domain errors (ErrTeamExists, ErrNotFound, etc.) are safe to expose.
