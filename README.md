@@ -2,6 +2,11 @@
 
 A REST API service for managing teams and automatically assigning pull request reviewers based on team membership.
 
+![Go](https://img.shields.io/badge/Go-1.26-00ADD8?style=flat&logo=go)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat&logo=postgresql)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 ## Tech Stack
 
 - **Go** (1.26) — HTTP server, business logic
@@ -18,6 +23,7 @@ The project follows **clean architecture** with strict layer separation:
 cmd/server/main.go          → entry point, dependency wiring
 internal/
 ├── config/                  → environment configuration
+├── middleware/              → HTTP middleware (logging, recovery)
 ├── model/                   → domain entities and error mapping
 ├── repository/              → data access layer (PostgreSQL)
 ├── service/                 → business logic and validation
@@ -31,25 +37,17 @@ Each layer depends only on abstractions (interfaces), following the **Dependency
 
 ## API Endpoints
 
-### Implemented
-
-| Method | Path | Description | Status |
-|--------|------|-------------|--------|
-| `GET` | `/health` | Health check | ✅ |
-| `POST` | `/team/add` | Create a team with members (transactional) | ✅ |
-| `GET` | `/team/get` | Get a team and its members | ✅ |
-| `POST` | `/users/setIsActive` | Activate/deactivate a user | ✅ |
-
-### In Progress
-
-| Method | Path | Description | Status |
-|--------|------|-------------|--------|
-| `POST` | `/pullRequest/create` | Create PR with automatic reviewer assignment | 🚧 |
-| `POST` | `/pullRequest/merge` | Merge a pull request | 📋 |
-| `POST` | `/pullRequest/reassign` | Reassign a reviewer | 📋 |
-| `GET` | `/users/getReview` | Get all PRs assigned to a user | 📋 |
-
-> **Note:** This project is in active development. Core infrastructure, database schema, and team/user management are fully functional. Pull request assignment logic is being finalized.
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health check |
+| `POST` | `/team/add` | Create a team with members |
+| `GET` | `/team/get` | Get a team and its members |
+| `POST` | `/users/setIsActive` | Activate/deactivate a user |
+| `POST` | `/pullRequest/create` | Create PR with automatic reviewer assignment |
+| `POST` | `/pullRequest/merge` | Merge a pull request (idempotent) |
+| `POST` | `/pullRequest/reassign` | Reassign a reviewer |
+| `GET` | `/users/getReview` | Get all PRs assigned to a user |
+| `GET` | `/stats` | Get aggregated statistics (optional `team_name` filter) |
 
 ## Quick Start
 
@@ -103,6 +101,12 @@ curl http://localhost:8080/team/get?team_name=backend
 curl -X POST http://localhost:8080/users/setIsActive \
   -H "Content-Type: application/json" \
   -d '{"user_id": "u1", "is_active": false}'
+  
+# Get global stats
+curl http://localhost:8080/stats
+
+# Get stats for a specific team
+curl "http://localhost:8080/stats?team_name=backend"  
 ```
 
 ## Database Schema
@@ -136,6 +140,9 @@ Migrations are stored in `migrations/` and applied automatically on startup.
 │   ├── model/
 │   │   ├── model.go             # Domain entities
 │   │   └── errors.go            # Error codes and HTTP status mapping
+│   ├── middleware/
+│   │   ├── logging.go           # Request logging with time
+│   │   └── recovery.go          # Panic recovery
 │   ├── repository/
 │   │   ├── team.go              # Team data access
 │   │   ├── user.go              # User data access
