@@ -47,6 +47,7 @@ Each layer depends only on abstractions (interfaces), following the **Dependency
 | `POST` | `/pullRequest/merge` | Merge a pull request (idempotent) |
 | `POST` | `/pullRequest/reassign` | Reassign a reviewer |
 | `GET` | `/users/getReview` | Get all PRs assigned to a user |
+| `GET` | `/stats` | Get aggregated statistics (optional `team_name` filter) |
 
 ## Quick Start
 
@@ -100,6 +101,12 @@ curl http://localhost:8080/team/get?team_name=backend
 curl -X POST http://localhost:8080/users/setIsActive \
   -H "Content-Type: application/json" \
   -d '{"user_id": "u1", "is_active": false}'
+  
+# Get global stats
+curl http://localhost:8080/stats
+
+# Get stats for a specific team
+curl "http://localhost:8080/stats?team_name=backend"  
 ```
 
 ## Database Schema

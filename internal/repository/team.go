@@ -96,3 +96,14 @@ func (r *TeamRepository) GetTeam(ctx context.Context, teamName string) (model.Te
 
 	return team, nil
 }
+
+// TeamExists checks whether a team exists by name.
+// Returns true if exists, false otherwise.
+func (r *TeamRepository) TeamExists(ctx context.Context, teamName string) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM teams WHERE team_name = $1)", teamName).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check team existence: %w", err)
+	}
+	return exists, nil
+}

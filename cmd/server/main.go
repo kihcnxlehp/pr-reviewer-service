@@ -55,16 +55,19 @@ func main() {
 	teamRepo := repository.NewTeamRepository(pool)
 	userRepo := repository.NewUserRepository(pool)
 	prRepo := repository.NewPullRequestRepository(pool)
+	statsRepo := repository.NewStatsRepository(pool)
 
 	teamService := service.NewTeamService(teamRepo)
 	userService := service.NewUserService(userRepo)
 	prService := service.NewPullRequestService(prRepo, userRepo)
+	statsService := service.NewStatsService(statsRepo, teamRepo)
 
 	teamHandler := handler.NewTeamHandler(teamService)
 	userHandler := handler.NewUserHandler(userService)
 	prHandler := handler.NewPullRequestHandler(prService)
+	statsHandler := handler.NewStatsHandler(statsService)
 
-	handlers := handler.New(teamHandler, userHandler, prHandler)
+	handlers := handler.New(teamHandler, userHandler, prHandler, statsHandler)
 
 	// Set up HTTP server.
 	mux := http.NewServeMux()

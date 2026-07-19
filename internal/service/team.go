@@ -13,6 +13,7 @@ import (
 type TeamRepository interface {
 	CreateTeam(ctx context.Context, team model.Team) error
 	GetTeam(ctx context.Context, teamName string) (model.Team, error)
+	TeamExists(ctx context.Context, teamName string) (bool, error)
 }
 
 // TeamService handles team-related business logic.
@@ -60,18 +61,19 @@ func (s *TeamService) validateTeam(team model.Team) error {
 	}
 
 	userIDs := make(map[string]bool, len(team.Members))
+  
 	for i, m := range team.Members {
-		if m.UserID == "" {
-			return fmt.Errorf("%w: members[%d].user_id is required", model.ErrInvalidInput, i)
-		}
-		if m.Username == "" {
-			return fmt.Errorf("%w: members[%d].username is required", model.ErrInvalidInput, i)
-		}
+    if m.UserID == "" {
+        return fmt.Errorf("%w: members[%d].user_id is required", model.ErrInvalidInput, i)
+    }
+    if m.Username == "" {
+        return fmt.Errorf("%w: members[%d].username is required", model.ErrInvalidInput, i)
+    }
+    if userIDs[m.UserID] {
+        return fmt.Errorf("%w: duplicate user_id in members: %s", model.ErrInvalidInput, m.UserID)
+    }
+    userIDs[m.UserID] = true
+}
 
-		if userIDs[m.UserID] {
-			return fmt.Errorf("%w: duplicate user_id in members: %s", model.ErrInvalidInput, m.UserID)
-		}
-		userIDs[m.UserID] = true
-	}
 	return nil
 }
