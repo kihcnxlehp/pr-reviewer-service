@@ -28,7 +28,7 @@ func NewUserService(repo UserRepository) *UserService {
 // SetIsActive updates the active status of a user.
 func (s *UserService) SetIsActive(ctx context.Context, userID string, isActive bool) (model.User, error) {
 	if userID == "" {
-		return model.User{}, fmt.Errorf("user id is empty: %w", model.ErrInvalidInput)
+		return model.User{}, fmt.Errorf("%w: user_id is required", model.ErrInvalidInput)
 	}
 
 	user, err := s.repo.UpdateIsActive(ctx, userID, isActive)

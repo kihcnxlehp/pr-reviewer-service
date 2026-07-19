@@ -60,19 +60,20 @@ func (s *TeamService) validateTeam(team model.Team) error {
 		return fmt.Errorf("%w: members list cannot be empty", model.ErrInvalidInput)
 	}
 
-	userIDs := map[string]bool{}
+	userIDs := make(map[string]bool, len(team.Members))
+  
 	for i, m := range team.Members {
-		if m.UserID == "" {
-			return fmt.Errorf("%w: members[%d].user_id is required", model.ErrInvalidInput, i)
-		}
-		if m.Username == "" {
-			return fmt.Errorf("%w: members[%d].username is required", model.ErrInvalidInput, i)
-		}
-		if userIDs[m.UserID] {
-			return fmt.Errorf("%w: duplicate user_id in members: %s", model.ErrInvalidInput, m.Username)
-		}
-		userIDs[m.UserID] = true
-	}
+    if m.UserID == "" {
+        return fmt.Errorf("%w: members[%d].user_id is required", model.ErrInvalidInput, i)
+    }
+    if m.Username == "" {
+        return fmt.Errorf("%w: members[%d].username is required", model.ErrInvalidInput, i)
+    }
+    if userIDs[m.UserID] {
+        return fmt.Errorf("%w: duplicate user_id in members: %s", model.ErrInvalidInput, m.UserID)
+    }
+    userIDs[m.UserID] = true
+}
 
 	return nil
 }

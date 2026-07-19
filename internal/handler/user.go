@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/kihcnxlehp/pr-reviewer-service/internal/model"
@@ -32,14 +31,8 @@ type SetIsActiveRequest struct {
 
 // SetIsActive handles POST /users/setIsActive.
 func (h *UserHandler) SetIsActive(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
-	defer r.Body.Close()
-
 	var req SetIsActiveRequest
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-
-	if err := dec.Decode(&req); err != nil {
+	if err := decodeJSON(w, r, &req); err != nil {
 		writeError(w, err)
 		return
 	}

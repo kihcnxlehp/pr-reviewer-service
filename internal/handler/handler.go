@@ -89,9 +89,11 @@ func safeMessage(err error, status int) string {
 		return "invalid JSON payload"
 	case errors.Is(err, model.ErrInvalidInput):
 		// Strip internal details (e.g. "team_name is required"), keep only the generic message.
+		log.Printf("invalid input: %v", err)
 		return "invalid request payload"
 	case status >= http.StatusInternalServerError:
 		// Hide all internal errors.
+		log.Printf("internal error: %v", err)
 		return "internal server error"
 	default:
 		// Domain errors (ErrTeamExists, ErrNotFound, etc.) are safe to expose.
@@ -104,4 +106,20 @@ func isJSONParseError(err error) bool {
 	var syntaxErr *json.SyntaxError
 	var typeErr *json.UnmarshalTypeError
 	return errors.As(err, &syntaxErr) || errors.As(err, &typeErr)
+}
+
+// decodeJSON reads and validates JSON request body.
+// It applies MaxBytesReader limit and disallows unknown fields.
+func decodeJSON(w http.ResponseWriter, r *http.Request, v any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBodySize)
+	defer r.Body.Close()
+
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(v); err != nil {
+		return err
+	}
+
+	return nil
 }
