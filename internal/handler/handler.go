@@ -15,11 +15,12 @@ type Handler struct {
 	team        *TeamHandler
 	user        *UserHandler
 	pullRequest *PullRequestHandler
+	stats       *StatsHandler
 }
 
 // New creates a new Handler.
-func New(team *TeamHandler, user *UserHandler, pr *PullRequestHandler) *Handler {
-	return &Handler{team: team, user: user, pullRequest: pr}
+func New(team *TeamHandler, user *UserHandler, pr *PullRequestHandler, stats *StatsHandler) *Handler {
+	return &Handler{team: team, user: user, pullRequest: pr, stats: stats}
 }
 
 // MaxRequestBodySize limits payload size to 1 MB.
@@ -39,6 +40,9 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /pullRequest/create", h.pullRequest.CreatePullRequest)
 	mux.HandleFunc("POST /pullRequest/merge", h.pullRequest.MergePullRequest)
 	mux.HandleFunc("POST /pullRequest/reassign", h.pullRequest.ReassignPullRequest)
+
+	// Stats route
+	mux.HandleFunc("GET /stats", h.stats.GetStats)
 
 	// Common routes
 	mux.HandleFunc("GET /health", h.Health)
